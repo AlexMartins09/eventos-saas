@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '../../../components/ui/toast';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Event } from '@/lib/types';
