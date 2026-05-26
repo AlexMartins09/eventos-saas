@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { User, Event, Registration, UserRole, EventStatus } from './types';
+import { connectToDatabase, MongoUser, MongoEvent, MongoRegistration } from './mongodb';
+
+// Verificar se as credenciais do MongoDB estão configuradas
+const MONGODB_URI = process.env.MONGODB_URI || '';
+const isMongoConfigured = !!MONGODB_URI;
 
 // Verificar se as credenciais do Supabase estão configuradas
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -9,7 +14,14 @@ const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
 // Inicializar cliente do Supabase se configurado
 export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseKey) : null;
 
-console.log(`[DB] EventFlow inicializado em modo: ${isSupabaseConfigured ? 'SUPABASE REAL' : 'FALLBACK LOCAL (JSON)'}`);
+let dbModeLabel = 'FALLBACK LOCAL (JSON)';
+if (isMongoConfigured) {
+  dbModeLabel = 'MONGODB REAL';
+} else if (isSupabaseConfigured) {
+  dbModeLabel = 'SUPABASE REAL';
+}
+
+console.log(`[DB] EventFlow inicializado em modo: ${dbModeLabel}`);
 
 // --- IMPLEMENTAÇÃO DE FALLBACK LOCAL (ARQUIVO JSON) ---
 // Carregar módulos fs e path dinamicamente apenas no ambiente Node
@@ -123,9 +135,14 @@ const writeLocalDB = (db: LocalDB) => {
 
 // --- CLIENTE DB EXPORTADO (UNIFICADO) ---
 export const db = {
+  supabase,
   // --- OPERAÇÕES DE USERS ---
   async getUserByEmail(email: string): Promise<User | null> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const user = await MongoUser.findOne({ email: new RegExp(`^${email}$`, 'i') }).lean();
+      return user ? (user as any) : null;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -140,7 +157,11 @@ export const db = {
   },
 
   async getUserById(id: string): Promise<User | null> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const user = await MongoUser.findOne({ id }).lean();
+      return user ? (user as any) : null;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -161,7 +182,11 @@ export const db = {
       created_at: new Date().toISOString()
     };
 
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      await MongoUser.create(newUser);
+      return newUser;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('users')
         .insert([newUser])
@@ -182,7 +207,31 @@ export const db = {
 
   // --- OPERAÇÕES DE EVENTS ---
   async getEvents(): Promise<Event[]> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const events = await MongoEvent.find().sort({ event_date: 1 }).lean();
+      const mappedEvents = await Promise.all((events as any[]).map(async (ev) => {
+        const regsCount = await MongoRegistration.countDocuments({ event_id: ev.id });
+        const now = new Date();
+        const evDate = new Date(ev.event_date);
+        let status: EventStatus = ev.status;
+        
+        if (evDate < now) {
+          status = 'encerrado';
+        } else if (regsCount >= ev.max_participants) {
+          status = 'lotado';
+        } else {
+          status = 'ativo';
+        }
+
+        if (status !== ev.status) {
+          await MongoEvent.updateOne({ id: ev.id }, { status });
+          ev.status = status;
+        }
+        return ev;
+      }));
+      return mappedEvents;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -191,7 +240,6 @@ export const db = {
       return data || [];
     } else {
       const local = readLocalDB();
-      // Atualizar status automático se atingiu o máximo de participantes
       for (const ev of local.events) {
         const regsCount = local.registrations.filter(r => r.event_id === ev.id).length;
         const now = new Date();
@@ -211,7 +259,28 @@ export const db = {
   },
 
   async getEventBySlug(slug: string): Promise<Event | null> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const ev = await MongoEvent.findOne({ slug }).lean();
+      if (!ev) return null;
+      
+      const regsCount = await MongoRegistration.countDocuments({ event_id: ev.id });
+      const now = new Date();
+      const evDate = new Date(ev.event_date);
+      let status: EventStatus = ev.status;
+      if (evDate < now) {
+        status = 'encerrado';
+      } else if (regsCount >= ev.max_participants) {
+        status = 'lotado';
+      } else {
+        status = 'ativo';
+      }
+      if (status !== ev.status) {
+        await MongoEvent.updateOne({ id: ev.id }, { status });
+        (ev as any).status = status;
+      }
+      return ev as any;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -226,7 +295,28 @@ export const db = {
   },
 
   async getEventById(id: string): Promise<Event | null> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const ev = await MongoEvent.findOne({ id }).lean();
+      if (!ev) return null;
+      
+      const regsCount = await MongoRegistration.countDocuments({ event_id: ev.id });
+      const now = new Date();
+      const evDate = new Date(ev.event_date);
+      let status: EventStatus = ev.status;
+      if (evDate < now) {
+        status = 'encerrado';
+      } else if (regsCount >= ev.max_participants) {
+        status = 'lotado';
+      } else {
+        status = 'ativo';
+      }
+      if (status !== ev.status) {
+        await MongoEvent.updateOne({ id: ev.id }, { status });
+        (ev as any).status = status;
+      }
+      return ev as any;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -248,7 +338,11 @@ export const db = {
       created_at: new Date().toISOString()
     };
 
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      await MongoEvent.create(newEvent);
+      return newEvent;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('events')
         .insert([newEvent])
@@ -268,7 +362,16 @@ export const db = {
   },
 
   async updateEvent(id: string, eventUpdate: Partial<Omit<Event, 'id' | 'created_at'>>): Promise<Event> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const updated = await MongoEvent.findOneAndUpdate(
+        { id },
+        { $set: eventUpdate },
+        { new: true }
+      ).lean();
+      if (!updated) throw new Error('Evento não encontrado');
+      return updated as any;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('events')
         .update(eventUpdate)
@@ -296,7 +399,12 @@ export const db = {
   },
 
   async deleteEvent(id: string): Promise<boolean> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const result = await MongoEvent.deleteOne({ id });
+      await MongoRegistration.deleteMany({ event_id: id });
+      return result.deletedCount > 0;
+    } else if (supabase) {
       const { error } = await supabase
         .from('events')
         .delete()
@@ -310,15 +418,25 @@ export const db = {
       const local = readLocalDB();
       const initialLength = local.events.length;
       local.events = local.events.filter(e => e.id !== id);
-      local.registrations = local.registrations.filter(r => r.event_id !== id); // Excluir inscrições órfãs
+      local.registrations = local.registrations.filter(r => r.event_id !== id);
       writeLocalDB(local);
       return local.events.length < initialLength;
     }
   },
 
-  // --- OPERAÇÕES DE REGISTRATIONS ---
+  // --- OPERAÇÕES DE INSCRIÇÕES (REGISTRATIONS) ---
   async getRegistrationsByEventId(eventId: string): Promise<Registration[]> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const regs = await MongoRegistration.find({ event_id: eventId }).sort({ created_at: -1 }).lean();
+      return Promise.all((regs as any[]).map(async (r) => {
+        const u = await MongoUser.findOne({ id: r.user_id }).lean();
+        return {
+          ...r,
+          user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, created_at: u.created_at } : undefined
+        };
+      }));
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('registrations')
         .select(`
@@ -336,14 +454,24 @@ export const db = {
         const u = local.users.find(usr => usr.id === r.user_id);
         return {
           ...r,
-          user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone } : undefined
+          user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, created_at: u.created_at } : undefined
         };
       });
     }
   },
 
   async getRegistrationsByUserId(userId: string): Promise<Registration[]> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const regs = await MongoRegistration.find({ user_id: userId }).sort({ created_at: -1 }).lean();
+      return Promise.all((regs as any[]).map(async (r) => {
+        const ev = await MongoEvent.findOne({ id: r.event_id }).lean();
+        return {
+          ...r,
+          event: ev || undefined
+        };
+      }));
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('registrations')
         .select(`
@@ -368,7 +496,18 @@ export const db = {
   },
 
   async getRegistrationById(id: string): Promise<Registration | null> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const r = await MongoRegistration.findOne({ id }).lean();
+      if (!r) return null;
+      const ev = await MongoEvent.findOne({ id: r.event_id }).lean();
+      const u = await MongoUser.findOne({ id: r.user_id }).lean();
+      return {
+        ...r,
+        event: ev || undefined,
+        user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, created_at: u.created_at } : undefined
+      } as any;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('registrations')
         .select(`
@@ -389,13 +528,24 @@ export const db = {
       return {
         ...r,
         event: ev,
-        user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone } : undefined
+        user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, created_at: u.created_at } : undefined
       };
     }
   },
 
   async getRegistrationByToken(token: string): Promise<Registration | null> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const r = await MongoRegistration.findOne({ unique_token: token }).lean();
+      if (!r) return null;
+      const ev = await MongoEvent.findOne({ id: r.event_id }).lean();
+      const u = await MongoUser.findOne({ id: r.user_id }).lean();
+      return {
+        ...r,
+        event: ev || undefined,
+        user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, created_at: u.created_at } : undefined
+      } as any;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('registrations')
         .select(`
@@ -416,7 +566,7 @@ export const db = {
       return {
         ...r,
         event: ev,
-        user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone } : undefined
+        user: u ? { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, created_at: u.created_at } : undefined
       };
     }
   },
@@ -431,7 +581,35 @@ export const db = {
       created_at: new Date().toISOString()
     };
 
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const user = await MongoUser.findOne({ id: registration.user_id });
+      if (!user) throw new Error('Usuário não encontrado');
+
+      const alreadyRegistered = await MongoRegistration.findOne({
+        event_id: registration.event_id,
+        user_id: registration.user_id
+      });
+      if (alreadyRegistered) {
+        throw new Error('Você já está inscrito neste evento!');
+      }
+
+      const ev = await MongoEvent.findOne({ id: registration.event_id });
+      if (!ev) throw new Error('Evento não encontrado');
+
+      const count = await MongoRegistration.countDocuments({ event_id: registration.event_id });
+      if (count >= ev.max_participants) {
+        throw new Error('Desculpe, este evento já está lotado!');
+      }
+
+      await MongoRegistration.create(newReg);
+
+      if (count + 1 >= ev.max_participants) {
+        await MongoEvent.updateOne({ id: ev.id }, { status: 'lotado' });
+      }
+
+      return newReg;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('registrations')
         .insert([newReg])
@@ -445,7 +623,6 @@ export const db = {
     } else {
       const local = readLocalDB();
       
-      // Validar email único no evento
       const user = local.users.find(u => u.id === registration.user_id);
       if (!user) throw new Error('Usuário não encontrado');
       
@@ -457,7 +634,6 @@ export const db = {
         throw new Error('Você já está inscrito neste evento!');
       }
 
-      // Validar capacidade de vagas
       const ev = local.events.find(e => e.id === registration.event_id);
       if (!ev) throw new Error('Evento não encontrado');
       
@@ -468,7 +644,6 @@ export const db = {
 
       local.registrations.push(newReg);
       
-      // Atualizar status do evento automaticamente
       if (count + 1 >= ev.max_participants) {
         ev.status = 'lotado';
       }
@@ -479,7 +654,16 @@ export const db = {
   },
 
   async updateRegistrationCheckin(registrationId: string, checkinDone: boolean, checkinAt: string | null): Promise<Registration> {
-    if (supabase) {
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const updated = await MongoRegistration.findOneAndUpdate(
+        { id: registrationId },
+        { $set: { checkin_done: checkinDone, checkin_at: checkinAt } },
+        { new: true }
+      ).lean();
+      if (!updated) throw new Error('Inscrição não encontrada');
+      return updated as any;
+    } else if (supabase) {
       const { data, error } = await supabase
         .from('registrations')
         .update({
@@ -519,8 +703,42 @@ export const db = {
     registrationsPerEvent: { title: string; count: number }[];
     checkinRatio: { label: string; count: number }[];
   }> {
-    if (supabase) {
-      // Obter dados em paralelo via Supabase
+    if (isMongoConfigured) {
+      await connectToDatabase();
+      const [events, regs] = await Promise.all([
+        MongoEvent.find({}, 'id title status').lean(),
+        MongoRegistration.find({}, 'id event_id checkin_done').lean()
+      ]);
+
+      const totalEvents = events.length;
+      const activeEvents = events.filter((e: any) => e.status === 'ativo').length;
+      const totalRegistrations = regs.length;
+      const confirmedCheckins = regs.filter((r: any) => r.checkin_done).length;
+
+      const regCountMap: Record<string, number> = {};
+      regs.forEach((r: any) => {
+        regCountMap[r.event_id] = (regCountMap[r.event_id] || 0) + 1;
+      });
+
+      const registrationsPerEvent = events.map((e: any) => ({
+        title: e.title,
+        count: regCountMap[e.id] || 0
+      })).slice(0, 5);
+
+      const checkinRatio = [
+        { label: 'Presentes', count: confirmedCheckins },
+        { label: 'Faltantes', count: totalRegistrations - confirmedCheckins }
+      ];
+
+      return {
+        totalEvents,
+        activeEvents,
+        totalRegistrations,
+        confirmedCheckins,
+        registrationsPerEvent,
+        checkinRatio
+      };
+    } else if (supabase) {
       const [eventsRes, regsRes] = await Promise.all([
         supabase.from('events').select('id, title, status'),
         supabase.from('registrations').select('id, event_id, checkin_done')
@@ -534,7 +752,6 @@ export const db = {
       const totalRegistrations = regs.length;
       const confirmedCheckins = regs.filter(r => r.checkin_done).length;
 
-      // Calcular inscrições por evento
       const regCountMap: Record<string, number> = {};
       regs.forEach(r => {
         regCountMap[r.event_id] = (regCountMap[r.event_id] || 0) + 1;
@@ -543,7 +760,7 @@ export const db = {
       const registrationsPerEvent = events.map(e => ({
         title: e.title,
         count: regCountMap[e.id] || 0
-      })).slice(0, 5); // Limitar a top 5
+      })).slice(0, 5);
 
       const checkinRatio = [
         { label: 'Presentes', count: confirmedCheckins },

@@ -3,8 +3,8 @@ import { JWTPayload } from './types';
 const SECRET_KEY_STR = process.env.JWT_SECRET || 'fallback_secret_key_event_flow_2026_change_in_production';
 
 // Utilitários para conversão Base64URL (Edge-safe)
-function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+function arrayBufferToBase64Url(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);

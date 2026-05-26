@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../../../components/ui/toast';
 import { Registration } from '@/lib/types';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 interface TicketPageClientProps {
   id: string;
