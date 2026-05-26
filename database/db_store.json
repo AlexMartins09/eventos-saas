@@ -1,0 +1,98 @@
+{
+  "users": [
+    {
+      "id": "d3b07384-d113-4ec6-a558-7beb2d68b23f",
+      "name": "Organizador Admin",
+      "email": "admin@eventflow.com",
+      "phone": "(11) 99999-9999",
+      "password_hash": "$2a$10$7wQ.YskqZ8p1hW7FpU5yK.mQk99J4Z89kE7q4J5z2G2m3L2a7K8iG",
+      "role": "ADMIN",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "a1b07384-d113-4ec6-a558-7beb2d68b23f",
+      "name": "Participante Teste",
+      "email": "participante@gmail.com",
+      "phone": "(11) 98888-8888",
+      "password_hash": "$2a$10$7wQ.YskqZ8p1hW7FpU5yK.mQk99J4Z89kE7q4J5z2G2m3L2a7K8iG",
+      "role": "PARTICIPANTE",
+      "created_at": "2026-01-02T00:00:00.000Z"
+    },
+    {
+      "name": "alex",
+      "email": "alex@adm.eccoprime.com.br",
+      "phone": "f45",
+      "password_hash": "f4b379a88254869dc0145218115e46629fe044aaa353d443af7521581b97918d",
+      "role": "ADMIN",
+      "id": "addac79e-81cc-4684-92a3-5f00a1ef448a",
+      "created_at": "2026-05-26T11:44:33.528Z"
+    },
+    {
+      "name": "alex",
+      "email": "alex@gmail.com",
+      "phone": "115632416532",
+      "password_hash": "4623c886ed48e0a76dd44b6253e29bb382aea9e3167af89fa64ee560bf213d97",
+      "role": "ADMIN",
+      "id": "98eef45a-fc5d-41d0-89e3-471f039497b5",
+      "created_at": "2026-05-26T11:51:20.462Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "e1b07384-d113-4ec6-a558-7beb2d68b23f",
+      "title": "Next.js & Supabase Masterclass 2026",
+      "slug": "nextjs-supabase-masterclass-2026",
+      "description": "Aprenda a construir plataformas SaaS ultra velozes de ponta a ponta com Next.js App Router, TailwindCSS e Supabase. Uma imersão de 8 horas com direito a certificado e QR Code de check-in na entrada!",
+      "banner_url": "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+      "location": "Av. Paulista, 1000 - São Paulo, SP",
+      "event_date": "2026-05-31T11:43:17.272Z",
+      "max_participants": 100,
+      "is_paid": false,
+      "status": "ativo",
+      "created_by": "d3b07384-d113-4ec6-a558-7beb2d68b23f",
+      "created_at": "2026-05-26T11:43:17.272Z"
+    },
+    {
+      "id": "e2b07384-d113-4ec6-a558-7beb2d68b23f",
+      "title": "SaaS Summit Brasil",
+      "slug": "saas-summit-brasil",
+      "description": "O maior encontro de fundadores, desenvolvedores e entusiastas de produtos de software por assinatura (SaaS) da América Latina. Palestras exclusivas sobre scale, marketing, precificação e tecnologia.",
+      "banner_url": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+      "location": "Centro de Convenções Rebouças, São Paulo",
+      "event_date": "2026-06-07T11:43:17.272Z",
+      "max_participants": 2,
+      "is_paid": true,
+      "status": "ativo",
+      "created_by": "d3b07384-d113-4ec6-a558-7beb2d68b23f",
+      "created_at": "2026-05-26T11:43:17.272Z"
+    },
+    {
+      "title": "dia dos pais",
+      "slug": "dia-dos-pais",
+      "description": "evento dia dos pais",
+      "banner_url": "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+      "location": "solideo gloria",
+      "event_date": "2026-05-28T15:56:00.000Z",
+      "max_participants": 100,
+      "is_paid": true,
+      "created_by": "98eef45a-fc5d-41d0-89e3-471f039497b5",
+      "id": "1130c5dd-1393-448c-83e9-001f7334c10f",
+      "status": "ativo",
+      "created_at": "2026-05-26T11:53:33.916Z",
+      "price": 105,
+      "whatsapp_contact": "81995173724"
+    }
+  ],
+  "registrations": [
+    {
+      "event_id": "1130c5dd-1393-448c-83e9-001f7334c10f",
+      "user_id": "98eef45a-fc5d-41d0-89e3-471f039497b5",
+      "qr_code": "data:image/png;base64,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",
+      "id": "765a1026-3197-4e72-bbf1-054d2d20ebc8",
+      "unique_token": "5d744033-574d-4884-8147-937784253c4d",
+      "checkin_done": false,
+      "checkin_at": null,
+      "created_at": "2026-05-26T11:55:58.750Z"
+    }
+  ]
+}
